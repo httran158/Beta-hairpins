@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Interactive plot of ΔG</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
+</head>
+<body>
+<div id="plot"></div>
+<div id="widgets">
+  <div class="widget">
+    <label for="delta-h">ΔH     (kJ/mol):<span id="delta-h-value">10</span></label>
+    <input type="range" id="delta-h" name="delta-h" min="-100" max="100" step="1" value="0">
+  </div>
+  <div class="widget">
+    <label for="delta-s">ΔS     (J/(mol.K)):<span id="delta-s-value">100</span></label>
+    <input type="range" id="delta-s" name="delta-s" min="-1000" max="1000" step="1" value="0">
+  </div>
+  <div class="widget">
+    <label for="delta-cp">ΔCp   (J/(mol.K)):    <span id="delta-cp-value">0</span></label>
+    <input type="range" id="delta-cp" name="delta-cp" min="-2000" max="2000" step="10" value="0">
+  </div>
+</div>
+<script>
+// Create a plot
+var T = numeric.linspace(150, 400, 251);
+function dG(T, ΔH, ΔS, ΔCp) {
+  return numeric.div(numeric.sub(
+    numeric.add(
+      numeric.mul(ΔH, 1000),
+      numeric.mul(ΔCp, numeric.sub(T, 298))
+    ),
+    numeric.mul(T, numeric.add(ΔS, numeric.mul(ΔCp, numeric.log(numeric.div(T, 298)))))
+  ), 1000);
+}
+
+var trace = {
+  x: T,
+  y: dG(T, 10, 100, 0),
+  type: 'scatter'
+};
+var data = [trace];
+var layout = {
+  title: 'Unfolding ΔG as a function of T (interactive mode)',
+  xaxis: {title: 'T (K)'},
+  yaxis: {title: 'ΔG (kJ/mol)'},
+  margin: {t: 50}
+};
+Plotly.newPlot('plot', data, layout);
+
+// Add slider widgets
+var deltaH = document.getElementById('delta-h');
+var deltaHValue = document.getElementById('delta-h-value');
+deltaH.addEventListener('input', function() {
+  var value = Number(this.value);
+  deltaHValue.innerText = value;
+  data[0].y = dG(T, value, Number(deltaS.value), Number(deltaCp.value));
+  Plotly.redraw('plot');
+  updateTmax();
+});
+
+var deltaS = document.getElementById('delta-s');
+var deltaSValue = document.getElementById('delta-s-value');
+deltaS.addEventListener('input', function() {
+  var value = Number(this.value);
+  deltaSValue.innerText = value;
+  data[0].y = dG(T, Number(deltaH.value), value, Number(deltaCp.value));
+  Plotly.redraw('plot');
+  updateTmax();
+});
+
+var deltaCp = document.getElementById('delta-cp');
+var deltaCpValue = document.getElementById('delta-cp-value');
+deltaCp.addEventListener('input', function() {
+    var value = Number(this.value);
+    deltaCpValue.innerText = value;
+    data[0].y = dG(T, Number(deltaH.value), Number(deltaS.value), value);
+    Plotly.redraw('plot');
+    updateTmax();
+});
+    
+var tMaxDiv = document.createElement('div');
+document.getElementById('widgets').appendChild(tMaxDiv);
+
+function updateTmax() {
+    var deltaSValue = Number(deltaS.value);
+    var deltaCpValue = Number(deltaCp.value);
+    var tMax = 298 * Math.exp(-deltaSValue / deltaCpValue);
+    tMaxDiv.textContent = 'Tₘₐₓ (Tₘᵢₙ): ' + tMax.toFixed(2) + ' K';
+    }
+    updateTmax();
+
+    var layout = {
+      title: {
+        text: 'ΔG (kJ mol⁻¹) of unfolding/decomplexation versus Temperature (K)',
+        font: {
+          family: 'Arial, sans-serif',
+          size: 30,
+          weight: 'bold',
+          color: 'black'
+        }
+      },
+      xaxis: { title: 'T (K)' },
+      yaxis: { title: 'ΔG (kJ mol⁻¹)' },
+      margin: { t: 50 },
+      shapes: [
+        {
+          type: 'rect',
+          xref: 'x',
+          yref: 'y',
+          x0: 273,
+          y0: -300,
+          x1: 373,
+          y1: 300,
+          fillcolor: 'red',
+          opacity: 0.3,
+          line: { color: 'red' }
+        }
+      ],
+      annotations: [
+        {
+          xref: 'x',
+          yref: 'paper',
+          x: 323,
+          y: 0.05,
+          text: '273K                                                                                                   373K',
+          showarrow: false,
+          font: {
+            family: 'Arial, sans-serif',
+            size: 14,
+            color: 'black'
+          }
+        }
+      ]
+    };
+
+    function updateShape() {
+      var yMin = Math.min(...data[0].y);
+      var yMax = Math.max(...data[0].y);
+      layout.shapes[0].y0 = yMin;
+      layout.shapes[0].y1 = yMax;
+    }
+    updateShape();
+    Plotly.newPlot('plot', data, layout);
+    function updatePlot() {
+      // Update data
+      // ...
+
+      updateShape();
+      Plotly.redraw('plot');
+    }
+
+    deltaH.addEventListener('input', updatePlot);
+    deltaS.addEventListener('input', updatePlot);
+    deltaCp.addEventListener('input', updatePlot);
+  </script>
+</body>
+</html>
